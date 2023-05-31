@@ -33,26 +33,23 @@ head(income)
 ```
 
 ```{r}
-regions <- unique(income$region) # get all unique regions
+regions <- unique(income$region) 
 
-tmp <- data.frame(matrix(ncol = ncol(income), nrow = 0)) # create an empty dataframe with the same columns as 'income'
-colnames(tmp) <- colnames(income) # set column names
+tmp <- data.frame(matrix(ncol = ncol(income), nrow = 0)) 
+colnames(tmp) <- colnames(income)
 
 for (reg in regions) {
-  vf <- subset(income, region == reg) # get all data for one region
-  vf <- vf[order(vf$'Income statement', vf$year), ] # order the dataframe by 'Income statement' and year
+  vf <- subset(income, region == reg) 
+  vf <- vf[order(vf$'Income statement', vf$year), ] 
   
-  for (feat in unique(income$'Income statement')) { # iterate over unique features
-    fea_df <- vf[vf$'Income statement' == feat, ] # get data for one feature
-    fea_df <- fea_df[seq(1, nrow(fea_df), 4), ] # take every fourth row to get one period, e.g. 1998-2001
+  for (feat in unique(income$'Income statement')) {
+    fea_df <- vf[vf$'Income statement' == feat, ]
+    # gör rätt
+    
+    
     
     for (i in seq_len(nrow(fea_df))) {
-      row <- data.frame(region = fea_df[i, 'region'],
-                        `Income statement` = fea_df[i, 'Income statement'],
-                        year = fea_df[i, 'year'],
-                        value = mean(fea_df[i:(i + 3), 'value'])) # calculate the mean value for the period
-      
-      tmp <- rbind(tmp, row) # add row to tmp dataframe
+     value = mean(fea_df[i:(i + 3), 'values'])
     }
   }
 }
