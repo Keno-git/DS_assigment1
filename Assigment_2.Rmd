@@ -1,0 +1,63 @@
+---
+title: "Assigment 2"
+output: html_notebook
+---
+
+```{r}
+install.packages("readr")  # To be able to read in swedish characters with read_delim
+install.packages("tidyverse")
+```
+```{r}
+library(tidyverse)
+library(lubridate)
+library(hms)
+library(readr)
+```
+
+```{r}
+political_seats <- read_delim("./datasets/political_seats.csv", delim = ",", locale = locale(encoding = "ISO-8859-1"), skip = 2)
+head(political_seats, show_col_types = FALSE)
+```
+```{r}
+income <- read_delim("./datasets/income_statements.csv", delim = ",", locale = locale(encoding = "ISO-8859-1"), skip = 2)
+income <- income[ , !(names(income) %in% "2022")]
+income[income == ".."] <- "0"
+income[is.na(income)] <- 0
+income <- type.convert(income, as.is = T)
+head(income, show_col_types = FALSE)
+```
+
+```{r}
+income <- pivot_longer(income, cols= -c("region", "Income statement"), names_to ="year", values_to="values")
+head(income)
+```
+
+```{r}
+regions <- unique(income$region) # get all unique regions
+
+tmp <- data.frame(matrix(ncol = ncol(income), nrow = 0)) # create an empty dataframe with the same columns as 'income'
+colnames(tmp) <- colnames(income) # set column names
+
+for (reg in regions) {
+  vf <- subset(income, region == reg) # get all data for one region
+  vf <- vf[order(vf$'Income statement', vf$year), ] # order the dataframe by 'Income statement' and year
+  
+  for (feat in unique(income$'Income statement')) { # iterate over unique features
+    fea_df <- vf[vf$'Income statement' == feat, ] # get data for one feature
+    fea_df <- fea_df[seq(1, nrow(fea_df), 4), ] # take every fourth row to get one period, e.g. 1998-2001
+    
+    for (i in seq_len(nrow(fea_df))) {
+      row <- data.frame(region = fea_df[i, 'region'],
+                        `Income statement` = fea_df[i, 'Income statement'],
+                        year = fea_df[i, 'year'],
+                        value = mean(fea_df[i:(i + 3), 'value'])) # calculate the mean value for the period
+      
+      tmp <- rbind(tmp, row) # add row to tmp dataframe
+    }
+  }
+}
+```
+
+
+
+
