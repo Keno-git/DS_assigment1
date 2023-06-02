@@ -4,8 +4,8 @@ output: html_notebook
 ---
 
 ```{r}
-install.packages("readr")  # To be able to read in swedish characters with read_delim
-install.packages("tidyverse")
+#install.packages("readr")  # To be able to read in swedish characters with read_delim
+#install.packages("tidyverse")
 ```
 ```{r}
 library(tidyverse)
@@ -18,6 +18,29 @@ library(readr)
 political_seats <- read_delim("./datasets/political_seats.csv", delim = ",", locale = locale(encoding = "ISO-8859-1"), skip = 2)
 head(political_seats, show_col_types = FALSE)
 ```
+```{r}
+political_seats[political_seats==".."] <- "0"
+political_seats <- type.convert(political_seats, as.is = T)
+
+political_seats <- political_seats %>%
+    pivot_longer(
+        cols = -c(region, party),
+        names_to = "year",
+        values_to = "value"
+    )
+head(political_seats)
+```
+```{r}
+political_seats <- political_seats %>% 
+    pivot_wider(
+        names_from = party,
+        values_from = value
+    )
+head(political_seats)
+```
+
+
+
 ```{r}
 income <- read_delim("./datasets/income_statements.csv", delim = ",", locale = locale(encoding = "ISO-8859-1"), skip = 2)
 income <- income[ , !(names(income) %in% "2022")]
@@ -33,27 +56,102 @@ head(income)
 ```
 
 ```{r}
-regions <- unique(income$region) 
+income <- type.convert(income, as.is = T) # convert year to int
 
-tmp <- data.frame(matrix(ncol = ncol(income), nrow = 0)) 
-colnames(tmp) <- colnames(income)
 
-for (reg in regions) {
-  vf <- subset(income, region == reg) 
-  vf <- vf[order(vf$'Income statement', vf$year), ] 
-  
-  for (feat in unique(income$'Income statement')) {
-    fea_df <- vf[vf$'Income statement' == feat, ]
-    # gör rätt
-    
-    
-    
-    for (i in seq_len(nrow(fea_df))) {
-     value = mean(fea_df[i:(i + 3), 'values'])
+grouped_data <- income %>%
+  group_by(region, `Income statement`)
+
+# Calculate the mean value for each four-year interval within each group
+reduced_data <- grouped_data %>%
+  mutate(interval = floor((year - first(year))/4) * 4 + first(year)) %>%
+  group_by(region, `Income statement`, interval) %>%
+  summarise(year = first(year), value = mean(values))
+
+# Keep only the first year in each four-year interval
+income <- reduced_data %>%
+  group_by(region, `Income statement`) %>%
+  filter(interval == year) %>%
+  select(region, `Income statement`, year, value)
+```
+```{r}
+income <- income %>% 
+    pivot_wider(
+        names_from = `Income statement`,
+        values_from = value
+    )
+```
+
+```{r}
+df <- merge(income, political_seats, by=c("year", "region"))
+head(df)
+```
+
+```{r}
+right <- rowSums(df[, c("The Christian Democratic Party", "The Liberal Party", "The Moderate Party")])
+centre <- df[["The Centre Party"]]
+left <- rowSums(df[, c("The Green Party", "The Left Party", "The Social Democratic Party")])
+indices <- rownames(df)
+```
+```{r}
+majority <- character(length(right))
+for (i in 1:length(right)) {
+  if (indices[i] == "2018") {
+    if (left[i] + centre[i] > right[i]) {
+      majority[i] <- "left"
+    } else if (left[i] + centre[i] < right[i]) {
+      majority[i] <- "right"
+    } else {
+      majority[i] <- "tie"
+    }
+  } else {
+    if (left[i] > right[i] + centre[i]) {
+      majority[i] <- "left"
+    } else if (left[i] < right[i] + centre[i]) {
+      majority[i] <- "right"
+    } else {
+      majority[i] <- "tie"
     }
   }
 }
 ```
+```{r}
+df$majority <- majority
+head(df)
+```
+```{r}
+df_cop <- df %>%
+    group_by(majority, year) %>%
+    summarize_all(mean) %>%
+    ungroup()
+```
+
+
+```{r}
+ggplot(data = df_cop) +
+  geom_boxplot(mapping = aes(x=majority, y = `Net profit/loss for the year`, color=majority)) + 
+  theme(aspect.ratio = 1)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
