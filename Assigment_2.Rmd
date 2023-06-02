@@ -162,6 +162,7 @@ possitive_features <- c("region", "General grants and equalisation grants", "yea
 
 df_clean <- select(df, all_of(possitive_features))
 df_clean$majority <- as.factor(df_clean$majority)
+df_clean$region <- as.factor(df_clean$region)
 print(is.factor(df_clean$majority))
 ```
 
@@ -207,9 +208,37 @@ ggplot() +
   geom_histogram(data = test, mapping = aes(x = majority, fill=majority), stat="count")
 ```
 
+```{r}
+(svm_mod <-
+     svm_linear(cost=4) %>%
+     set_engine("kernlab") %>%
+     set_mode("classification"))
+```
+
+```{r}
+(svm_fit <- svm_mod %>% fit(majority~., data = df_clean))
+```
+```{r}
+test[,0:11]
+```
 
 
+```{r}
+pred <- predict(svm_fit, new_data = test)
+pred$.pred_class <- as.factor(pred$.pred_class)
 
+(confmat <- confusionMatrix(pred$.pred_class, test$majority))
+```
+```{r}
+ggplot() +
+  geom_histogram(data = pred, mapping = aes(x = .pred_class, fill=.pred_class), stat="count")
+```
+
+
+```{r}
+ggplot() +
+  geom_histogram(data = test, mapping = aes(x = majority, fill=majority), stat="count")
+```
 
 
 
