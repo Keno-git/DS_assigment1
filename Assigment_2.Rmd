@@ -128,16 +128,84 @@ df_cop <- df %>%
 
 
 ```{r}
-ggplot(data = df_cop) +
-  geom_boxplot(mapping = aes(x=majority, y = `Net profit/loss for the year`, color=majority)) + 
-  theme(aspect.ratio = 1)
+# Calling cor() on all 
+(cormatrix <- df %>% select(`Financial costs`: `Total net current costs`) %>% cor)
+```
+```{r}
+# Convert to tibble and pivot to get format for heatmap
+(cortibble <- as_tibble(cormatrix, rownames = "X") %>%
+    pivot_longer(
+        -X,
+        names_to = "Y",
+        values_to = "cor"
+    ))
+```
+```{r}
+ggplot(cortibble, aes(X, Y)) +
+  geom_raster(aes(X, Y, fill = cor)) +
+  geom_text(aes(label = round(cor, 2)))+ 
+  scale_fill_distiller(palette = "RdYlGn", limits=c(-1, 1))+
+  theme(axis.text.x = element_text(angle=90, hjust=1)) 
+```
+```{r}
+#install.packages("caret") #install caret for classification 
+library(caret)
+```
+
+```{r}
+# Class distribution
+#percentage <- prop.table(table(df$majority)) * 100
+#cbind(freq=table(df$majority), percentage=percentage)
+```
+```{r}
+possitive_features <- c("region", "General grants and equalisation grants", "year", "Total net current costs", "Total income for operations", "Total costs for operations", "Tax revenues", "Net profit/loss for operations", "Net profit/loss after financial items", "Financial costs", "majority")
+
+df_clean <- select(df, all_of(possitive_features))
+df_clean$majority <- as.factor(df_clean$majority)
+print(is.factor(df_clean$majority))
 ```
 
 
+```{r}
+# create a list of 80% of the rows in the original dataset we can use for training
+test_index <- createDataPartition(df_clean$majority, p=0.80, list=FALSE)
+# select 20% of the data for validation
+test <- df_clean[-test_index,]
+# use the remaining 80% of data to training and testing the models
+df_clean <- df_clean[test_index,]
+```
 
+```{r}
+library(ranger)
+library(modelr)
+library(tidymodels)
+```
 
+```{r}
+(rf_mod <-
+     rand_forest(mtry = 2, trees = 100) %>%
+     set_engine("ranger", importance = "impurity") %>%
+     set_mode("classification"))
+```
+```{r}
+(rf_fit <- rf_mod %>% fit(majority~., data = df_clean))
+```
 
+```{r}
+pred <- predict(rf_fit, new_data = test)
+pred$.pred_class <- as.factor(pred$.pred_class)
 
+(confmat <- confusionMatrix(pred$.pred_class, test$majority))
+```
+```{r}
+ggplot() +
+  geom_histogram(data = pred, mapping = aes(x = .pred_class, fill=.pred_class), stat="count")
+```
+
+```{r}
+ggplot() +
+  geom_histogram(data = test, mapping = aes(x = majority, fill=majority), stat="count")
+```
 
 
 
