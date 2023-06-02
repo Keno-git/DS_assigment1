@@ -240,8 +240,41 @@ ggplot() +
   geom_histogram(data = test, mapping = aes(x = majority, fill=majority), stat="count")
 ```
 
+```{r}
+df %>%
+  group_by(majority) %>%
+  summarise(
+      count = n(),
+      min(`General grants and equalisation grants`),
+      max(`General grants and equalisation grants`),
+      mean(`General grants and equalisation grants`),
+      median(`General grants and equalisation grants`)
+  )
+```
 
+```{r}
+df %>%
+  group_by(majority) %>%
+  summarise(
+      count = n(),
+      min(`Tax revenues`),
+      max(`Tax revenues`),
+      mean(`Tax revenues`),
+      median(`Tax revenues`)
+  )
+```
 
+```{r}
+df %>%
+  group_by(majority) %>%
+  summarise(
+      count = n(),
+      min(`Net profit/loss for the year`),
+      max(`Net profit/loss for the year`),
+      mean(`Net profit/loss for the year`),
+      median(`Net profit/loss for the year`)
+  )
+```
 
 
 
